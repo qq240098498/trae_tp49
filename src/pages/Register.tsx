@@ -216,8 +216,7 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A1628] text-white p-6 relative">
-      <div className="max-w-[1400px] mx-auto">
+    <div className="text-white relative w-full p-6">
         <h1 className="text-2xl font-bold mb-6">风险登记册</h1>
 
         <div className="space-y-3 mb-6">
@@ -383,11 +382,10 @@ export default function Register() {
         <div className="mt-4 text-sm text-slate-500">
           共 {filteredRisks.length} 条风险记录
         </div>
-      </div>
 
       {selectedRiskId && (
         <div
-          className="fixed inset-0 bg-black/50 z-40"
+          className="fixed top-0 right-0 bottom-0 left-[240px] bg-black/50 z-40"
           onClick={() => setSelectedRiskId(null)}
         />
       )}

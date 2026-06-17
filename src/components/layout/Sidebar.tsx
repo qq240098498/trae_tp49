@@ -11,7 +11,7 @@ const navItems = [
 
 export default function Sidebar() {
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[240px] flex flex-col" style={{ backgroundColor: '#0B1426' }}>
+    <aside className="fixed left-0 top-0 bottom-0 w-[240px] flex flex-col z-[60]" style={{ backgroundColor: '#0B1426' }}>
       <div className="flex items-center gap-3 px-6 h-16 shrink-0">
         <Shield size={28} className="text-amber-500" strokeWidth={2} />
         <span className="font-display text-xl font-bold tracking-wide" style={{ color: '#E8EDF5' }}>

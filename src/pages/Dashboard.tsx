@@ -114,7 +114,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-6 space-y-6" style={{ background: 'var(--bg-primary)' }}>
+    <div className="w-full p-6 space-y-6">
       <div className="grid grid-cols-4 gap-4">
         {metricCards.map((card) => {
           const Icon = card.icon

@@ -120,8 +120,7 @@ export default function Response() {
   }, [completedPlans, riskHistories])
 
   return (
-    <div className="min-h-screen bg-[#0A1628] text-white p-6">
-      <div className="max-w-[1400px] mx-auto">
+    <div className="text-white w-full space-y-6 p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">响应预案管理</h1>
           <button
@@ -331,14 +330,13 @@ export default function Response() {
             </div>
           )}
         </div>
-      </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center" onClick={() => setShowAddModal(false)}>
+        <div className="fixed top-0 right-0 bottom-0 left-[240px] bg-black/50 z-40 flex items-center justify-center" onClick={() => setShowAddModal(false)}>
           <div
             className="w-[480px] rounded-xl border p-6"
             style={{ background: '#0F1D33', borderColor: '#1E3A5F' }}
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold">新增预案</h2>

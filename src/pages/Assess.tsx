@@ -115,8 +115,7 @@ export default function Assess() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1426] text-white p-6">
-      <div className="max-w-[1400px] mx-auto">
+    <div className="text-white w-full p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">
             {isEditing ? '编辑风险' : '风险识别与评估'}
@@ -398,7 +397,6 @@ export default function Assess() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   )
 }

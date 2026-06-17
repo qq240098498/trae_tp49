@@ -139,7 +139,7 @@ export default function Trends() {
   }, [areaData])
 
   return (
-    <div className="min-h-screen p-6 space-y-6" style={{ background: 'var(--bg-primary)' }}>
+    <div className="space-y-6 p-6" style={{ background: 'var(--bg-primary)' }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <TrendingUp size={22} style={{ color: 'var(--accent-amber)' }} />
