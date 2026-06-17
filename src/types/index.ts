@@ -179,3 +179,68 @@ export const CHAIN_CATEGORY_LABELS: Record<string, string> = {
   resource: '资源传导链',
   dependency: '依赖传导链',
 }
+
+export type ProjectType = 'agile' | 'waterfall'
+export type ProjectStage = 'requirements' | 'development' | 'testing' | 'launch'
+export type ThresholdIndicator =
+  | 'scheduleDeviation'
+  | 'requirementChangeFreq'
+  | 'resourceUtilization'
+  | 'bugDensity'
+  | 'testPassRate'
+  | 'dependencyRisk'
+
+export interface ThresholdConfig {
+  id: string
+  indicator: ThresholdIndicator
+  projectType: ProjectType
+  projectStage: ProjectStage
+  yellowWarning: number
+  redWarning: number
+  unit: string
+  description: string
+  recommendationSource: string
+  lastUpdated: string
+  updatedBy: string
+}
+
+export interface ThresholdRecommendation {
+  indicator: ThresholdIndicator
+  label: string
+  yellowWarning: number
+  redWarning: number
+  unit: string
+  confidence: number
+  reason: string
+  historicalSamples: number
+}
+
+export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
+  agile: '敏捷项目',
+  waterfall: '瀑布项目',
+}
+
+export const PROJECT_STAGE_LABELS: Record<ProjectStage, string> = {
+  requirements: '需求阶段',
+  development: '开发阶段',
+  testing: '测试阶段',
+  launch: '上线阶段',
+}
+
+export const THRESHOLD_INDICATOR_LABELS: Record<ThresholdIndicator, string> = {
+  scheduleDeviation: '进度偏差率',
+  requirementChangeFreq: '需求变更频次',
+  resourceUtilization: '资源利用率',
+  bugDensity: '缺陷密度',
+  testPassRate: '测试通过率',
+  dependencyRisk: '依赖风险指数',
+}
+
+export const THRESHOLD_INDICATOR_UNITS: Record<ThresholdIndicator, string> = {
+  scheduleDeviation: '%',
+  requirementChangeFreq: '次/周',
+  resourceUtilization: '%',
+  bugDensity: '个/KLOC',
+  testPassRate: '%',
+  dependencyRisk: '分',
+}

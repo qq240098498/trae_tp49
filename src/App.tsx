@@ -7,6 +7,7 @@ import Assess from '@/pages/Assess'
 import Conduction from '@/pages/Conduction'
 import Trends from '@/pages/Trends'
 import Response from '@/pages/Response'
+import ThresholdSettings from '@/pages/ThresholdSettings'
 import { useRiskStore } from '@/stores/riskStore'
 import { useEffect } from 'react'
 
@@ -32,6 +33,7 @@ function AppLayout() {
             <Route path="/conduction" element={<Conduction />} />
             <Route path="/trends" element={<Trends />} />
             <Route path="/response" element={<Response />} />
+            <Route path="/thresholds" element={<ThresholdSettings />} />
           </Routes>
         </main>
       </div>

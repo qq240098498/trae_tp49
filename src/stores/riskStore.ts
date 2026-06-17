@@ -1,9 +1,33 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Risk, RiskHistory, ResponsePlan, TrendSnapshot, Alert, RiskConductionEdge, RiskConductionPath, ConductionAnalysisResult } from '@/types'
-import { mockRisks, mockRiskHistories, mockResponsePlans, mockTrendSnapshots, mockAlerts, mockConductionEdges, mockConductionPaths } from '@/data/mockData'
+import type {
+  Risk,
+  RiskHistory,
+  ResponsePlan,
+  TrendSnapshot,
+  Alert,
+  RiskConductionEdge,
+  RiskConductionPath,
+  ConductionAnalysisResult,
+  ThresholdConfig,
+  ThresholdRecommendation,
+  ProjectType,
+  ProjectStage,
+  ThresholdIndicator,
+} from '@/types'
+import {
+  mockRisks,
+  mockRiskHistories,
+  mockResponsePlans,
+  mockTrendSnapshots,
+  mockAlerts,
+  mockConductionEdges,
+  mockConductionPaths,
+  mockThresholdConfigs,
+} from '@/data/mockData'
 import { calculateRiskScore, getRiskLevel, generateRiskId, generateId } from '@/utils/riskCalc'
 import { analyzeConduction as analyzeConductionUtil } from '@/utils/conductionAnalysis'
+import { generateThresholdRecommendations } from '@/utils/thresholdRecommendation'
 
 interface RiskStore {
   risks: Risk[]
@@ -13,6 +37,7 @@ interface RiskStore {
   alerts: Alert[]
   conductionEdges: RiskConductionEdge[]
   conductionPaths: RiskConductionPath[]
+  thresholdConfigs: ThresholdConfig[]
   initialized: boolean
 
   initialize: () => void
@@ -29,6 +54,10 @@ interface RiskStore {
   removeConductionPath: (id: string) => void
   getConductionAnalysis: () => ConductionAnalysisResult
   getRelatedRisks: (riskId: string) => Risk[]
+  getThresholdConfigs: (projectType?: ProjectType, projectStage?: ProjectStage) => ThresholdConfig[]
+  updateThresholdConfig: (id: string, updates: Partial<ThresholdConfig>) => void
+  getRecommendations: (projectType: ProjectType, projectStage: ProjectStage) => ThresholdRecommendation[]
+  applyRecommendation: (indicator: ThresholdIndicator, projectType: ProjectType, projectStage: ProjectStage) => void
 }
 
 export const useRiskStore = create<RiskStore>()(
@@ -41,6 +70,7 @@ export const useRiskStore = create<RiskStore>()(
       alerts: [],
       conductionEdges: [],
       conductionPaths: [],
+      thresholdConfigs: [],
       initialized: false,
 
       initialize: () => {
@@ -53,6 +83,7 @@ export const useRiskStore = create<RiskStore>()(
             alerts: mockAlerts,
             conductionEdges: mockConductionEdges,
             conductionPaths: mockConductionPaths,
+            thresholdConfigs: mockThresholdConfigs,
             initialized: true,
           })
         }
@@ -172,6 +203,64 @@ export const useRiskStore = create<RiskStore>()(
           if (e.targetRiskId === riskId) relatedIds.add(e.sourceRiskId)
         })
         return risks.filter(r => relatedIds.has(r.id))
+      },
+
+      getThresholdConfigs: (projectType, projectStage) => {
+        const { thresholdConfigs } = get()
+        return thresholdConfigs.filter(c => {
+          if (projectType && c.projectType !== projectType) return false
+          if (projectStage && c.projectStage !== projectStage) return false
+          return true
+        })
+      },
+
+      updateThresholdConfig: (id, updates) => {
+        set((state) => ({
+          thresholdConfigs: state.thresholdConfigs.map(c =>
+            c.id === id
+              ? { ...c, ...updates, lastUpdated: new Date().toISOString().split('T')[0], updatedBy: '当前用户' }
+              : c
+          ),
+        }))
+      },
+
+      getRecommendations: (projectType, projectStage) => {
+        const { thresholdConfigs } = get()
+        return generateThresholdRecommendations(projectType, projectStage, thresholdConfigs)
+      },
+
+      applyRecommendation: (indicator, projectType, projectStage) => {
+        const recommendations = get().getRecommendations(projectType, projectStage)
+        const rec = recommendations.find(r => r.indicator === indicator)
+        if (!rec) return
+
+        const { thresholdConfigs } = get()
+        const existing = thresholdConfigs.find(
+          c => c.indicator === indicator && c.projectType === projectType && c.projectStage === projectStage
+        )
+
+        if (existing) {
+          get().updateThresholdConfig(existing.id, {
+            yellowWarning: rec.yellowWarning,
+            redWarning: rec.redWarning,
+            recommendationSource: `智能推荐（置信度${(rec.confidence * 100).toFixed(0)}%）`,
+          })
+        } else {
+          const newConfig: ThresholdConfig = {
+            id: generateId(),
+            indicator,
+            projectType,
+            projectStage,
+            yellowWarning: rec.yellowWarning,
+            redWarning: rec.redWarning,
+            unit: rec.unit,
+            description: rec.reason,
+            recommendationSource: `智能推荐（置信度${(rec.confidence * 100).toFixed(0)}%）`,
+            lastUpdated: new Date().toISOString().split('T')[0],
+            updatedBy: '当前用户',
+          }
+          set((state) => ({ thresholdConfigs: [...state.thresholdConfigs, newConfig] }))
+        }
       },
     }),
     { name: 'risk-control-store' }
