@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useRiskStore } from '@/stores/riskStore'
 import RiskConductionGraph from '@/components/RiskConductionGraph'
 import {
@@ -28,6 +28,8 @@ import {
   Filter,
   X,
   RefreshCw,
+  ChevronDown,
+  Check,
 } from 'lucide-react'
 import { identifyHubNodes, analyzeConduction } from '@/utils/conductionAnalysis'
 
@@ -39,8 +41,24 @@ export default function Conduction() {
   const [selectedDimensions, setSelectedDimensions] = useState<RiskDimension[]>([])
   const [selectedLevels, setSelectedLevels] = useState<RiskLevel[]>([])
   const [selectedChainCategories, setSelectedChainCategories] = useState<string[]>([])
+  const [dimensionDropdownOpen, setDimensionDropdownOpen] = useState<boolean>(false)
+  const [levelDropdownOpen, setLevelDropdownOpen] = useState<boolean>(false)
+  const [chainCategoryDropdownOpen, setChainCategoryDropdownOpen] = useState<boolean>(false)
+  const filterBarRef = useRef<HTMLDivElement>(null)
 
   useMemo(() => { initialize() }, [initialize])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterBarRef.current && !filterBarRef.current.contains(event.target as Node)) {
+        setDimensionDropdownOpen(false)
+        setLevelDropdownOpen(false)
+        setChainCategoryDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const filteredRisks = useMemo(() => {
     return risks.filter(risk => {
@@ -185,6 +203,7 @@ export default function Conduction() {
       </div>
 
       <div
+        ref={filterBarRef}
         className="rounded-xl p-4 border"
         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
       >
@@ -205,101 +224,189 @@ export default function Conduction() {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-[320px]">
-            <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-              <input
-                type="text"
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="搜索风险标题、描述或编号..."
-                className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm outline-none transition-colors"
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[220px] max-w-[300px]">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="搜索风险标题、描述或编号..."
+              className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm outline-none transition-colors"
+              style={{
+                background: 'var(--bg-card-hover)',
+                borderColor: 'var(--border-color)',
+                color: 'var(--text-primary)',
+              }}
+            />
+            {searchKeyword && (
+              <button
+                onClick={() => setSearchKeyword('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => {
+                setDimensionDropdownOpen(!dimensionDropdownOpen)
+                setLevelDropdownOpen(false)
+                setChainCategoryDropdownOpen(false)
+              }}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all duration-200"
+              style={{
+                background: 'var(--bg-card-hover)',
+                borderColor: selectedDimensions.length > 0 ? DIMENSION_COLORS[selectedDimensions[0]] : 'var(--border-color)',
+                color: selectedDimensions.length > 0 ? DIMENSION_COLORS[selectedDimensions[0]] : 'var(--text-secondary)',
+                minWidth: 140,
+              }}
+            >
+              <span className="flex-1 text-left text-xs">
+                {selectedDimensions.length === 0 ? '选择维度' : `维度 (${selectedDimensions.length})`}
+              </span>
+              <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
+            </button>
+            {dimensionDropdownOpen && (
+              <div
+                className="absolute top-full left-0 mt-1 rounded-lg border shadow-xl z-50 overflow-hidden"
                 style={{
-                  background: 'var(--bg-card-hover)',
+                  background: '#162240',
                   borderColor: 'var(--border-color)',
-                  color: 'var(--text-primary)',
+                  minWidth: 160,
                 }}
-              />
-              {searchKeyword && (
-                <button
-                  onClick={() => setSearchKeyword('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
+              >
+                {dimensionOptions.map(opt => {
+                  const isActive = selectedDimensions.includes(opt.value)
+                  return (
+                    <div
+                      key={opt.value}
+                      onClick={() => toggleDimension(opt.value)}
+                      className="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors text-xs"
+                      style={{
+                        background: isActive ? `${opt.color}15` : 'transparent',
+                        color: isActive ? opt.color : 'var(--text-secondary)',
+                      }}
+                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: opt.color }} />
+                      <span className="flex-1">{opt.label}</span>
+                      {isActive && <Check size={12} />}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>维度:</span>
-            <div className="flex items-center gap-1">
-              {dimensionOptions.map(opt => {
-                const isActive = selectedDimensions.includes(opt.value)
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => toggleDimension(opt.value)}
-                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 border"
-                    style={{
-                      background: isActive ? `${opt.color}20` : 'transparent',
-                      borderColor: isActive ? opt.color : 'var(--border-color)',
-                      color: isActive ? opt.color : 'var(--text-secondary)',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                )
-              })}
-            </div>
+          <div className="relative">
+            <button
+              onClick={() => {
+                setLevelDropdownOpen(!levelDropdownOpen)
+                setDimensionDropdownOpen(false)
+                setChainCategoryDropdownOpen(false)
+              }}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all duration-200"
+              style={{
+                background: 'var(--bg-card-hover)',
+                borderColor: selectedLevels.length > 0 ? LEVEL_COLORS[selectedLevels[0]] : 'var(--border-color)',
+                color: selectedLevels.length > 0 ? LEVEL_COLORS[selectedLevels[0]] : 'var(--text-secondary)',
+                minWidth: 130,
+              }}
+            >
+              <span className="flex-1 text-left text-xs">
+                {selectedLevels.length === 0 ? '选择等级' : `等级 (${selectedLevels.length})`}
+              </span>
+              <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
+            </button>
+            {levelDropdownOpen && (
+              <div
+                className="absolute top-full left-0 mt-1 rounded-lg border shadow-xl z-50 overflow-hidden"
+                style={{
+                  background: '#162240',
+                  borderColor: 'var(--border-color)',
+                  minWidth: 140,
+                }}
+              >
+                {levelOptions.map(opt => {
+                  const isActive = selectedLevels.includes(opt.value)
+                  return (
+                    <div
+                      key={opt.value}
+                      onClick={() => toggleLevel(opt.value)}
+                      className="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors text-xs"
+                      style={{
+                        background: isActive ? `${opt.color}15` : 'transparent',
+                        color: isActive ? opt.color : 'var(--text-secondary)',
+                      }}
+                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: opt.color }} />
+                      <span className="flex-1">{opt.label}</span>
+                      {isActive && <Check size={12} />}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>等级:</span>
-            <div className="flex items-center gap-1">
-              {levelOptions.map(opt => {
-                const isActive = selectedLevels.includes(opt.value)
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => toggleLevel(opt.value)}
-                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 border"
-                    style={{
-                      background: isActive ? `${opt.color}20` : 'transparent',
-                      borderColor: isActive ? opt.color : 'var(--border-color)',
-                      color: isActive ? opt.color : 'var(--text-secondary)',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>传导类型:</span>
-            <div className="flex items-center gap-1">
-              {chainCategoryOptions.map(opt => {
-                const isActive = selectedChainCategories.includes(opt.value)
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => toggleChainCategory(opt.value)}
-                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 border"
-                    style={{
-                      background: isActive ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
-                      borderColor: isActive ? '#8B5CF6' : 'var(--border-color)',
-                      color: isActive ? '#8B5CF6' : 'var(--text-secondary)',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                )
-              })}
-            </div>
+          <div className="relative">
+            <button
+              onClick={() => {
+                setChainCategoryDropdownOpen(!chainCategoryDropdownOpen)
+                setDimensionDropdownOpen(false)
+                setLevelDropdownOpen(false)
+              }}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all duration-200"
+              style={{
+                background: 'var(--bg-card-hover)',
+                borderColor: selectedChainCategories.length > 0 ? '#8B5CF6' : 'var(--border-color)',
+                color: selectedChainCategories.length > 0 ? '#8B5CF6' : 'var(--text-secondary)',
+                minWidth: 150,
+              }}
+            >
+              <span className="flex-1 text-left text-xs">
+                {selectedChainCategories.length === 0 ? '选择传导类型' : `传导类型 (${selectedChainCategories.length})`}
+              </span>
+              <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
+            </button>
+            {chainCategoryDropdownOpen && (
+              <div
+                className="absolute top-full left-0 mt-1 rounded-lg border shadow-xl z-50 overflow-hidden"
+                style={{
+                  background: '#162240',
+                  borderColor: 'var(--border-color)',
+                  minWidth: 160,
+                }}
+              >
+                {chainCategoryOptions.map(opt => {
+                  const isActive = selectedChainCategories.includes(opt.value)
+                  return (
+                    <div
+                      key={opt.value}
+                      onClick={() => toggleChainCategory(opt.value)}
+                      className="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors text-xs"
+                      style={{
+                        background: isActive ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                        color: isActive ? '#8B5CF6' : 'var(--text-secondary)',
+                      }}
+                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#8B5CF6' }} />
+                      <span className="flex-1">{opt.label}</span>
+                      {isActive && <Check size={12} />}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -309,6 +416,63 @@ export default function Conduction() {
               共找到 <span className="font-mono font-semibold" style={{ color: 'var(--accent-amber)' }}>{filteredRisks.length}</span> 个风险，
               <span className="font-mono font-semibold" style={{ color: '#8B5CF6' }}>{filteredPaths.length}</span> 条传导链
             </span>
+            {selectedDimensions.length > 0 && (
+              <div className="flex items-center gap-1 ml-2">
+                {selectedDimensions.map(d => (
+                  <span
+                    key={d}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs"
+                    style={{
+                      background: `${DIMENSION_COLORS[d]}20`,
+                      color: DIMENSION_COLORS[d],
+                    }}
+                  >
+                    {DIMENSION_LABELS[d]}
+                    <button onClick={() => toggleDimension(d)} className="opacity-70 hover:opacity-100">
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {selectedLevels.length > 0 && (
+              <div className="flex items-center gap-1">
+                {selectedLevels.map(l => (
+                  <span
+                    key={l}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs"
+                    style={{
+                      background: `${LEVEL_COLORS[l]}20`,
+                      color: LEVEL_COLORS[l],
+                    }}
+                  >
+                    {LEVEL_LABELS[l]}
+                    <button onClick={() => toggleLevel(l)} className="opacity-70 hover:opacity-100">
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {selectedChainCategories.length > 0 && (
+              <div className="flex items-center gap-1">
+                {selectedChainCategories.map(c => (
+                  <span
+                    key={c}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs"
+                    style={{
+                      background: 'rgba(139, 92, 246, 0.15)',
+                      color: '#8B5CF6',
+                    }}
+                  >
+                    {CHAIN_CATEGORY_LABELS[c]}
+                    <button onClick={() => toggleChainCategory(c)} className="opacity-70 hover:opacity-100">
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
