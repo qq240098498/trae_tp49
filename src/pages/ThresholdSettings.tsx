@@ -49,11 +49,11 @@ export default function ThresholdSettings() {
 
   const currentConfigs = useMemo(() => {
     return getThresholdConfigs(selectedProjectType, selectedStage)
-  }, [getThresholdConfigs, selectedProjectType, selectedStage])
+  }, [getThresholdConfigs, selectedProjectType, selectedStage, thresholdConfigs])
 
   const recommendations = useMemo(() => {
     return getRecommendations(selectedProjectType, selectedStage)
-  }, [getRecommendations, selectedProjectType, selectedStage])
+  }, [getRecommendations, selectedProjectType, selectedStage, thresholdConfigs])
 
   const isReverseIndicator = (indicator: ThresholdIndicator): boolean => {
     return indicator === 'testPassRate'
@@ -445,8 +445,23 @@ export default function ThresholdSettings() {
                           <input
                             type="number"
                             value={editValues.yellow}
-                            onChange={(e) => setEditValues(prev => ({ ...prev, yellow: Number(e.target.value) }))}
-                            className="w-full px-2 py-1 rounded border text-sm font-mono outline-none"
+                            onChange={(e) => {
+                              const val = Number(e.target.value)
+                              const maxVal = isReverseIndicator(config.indicator) ? 100 : 100
+                              const minVal = 0
+                              const clampedVal = Math.max(minVal, Math.min(maxVal, val))
+                              setEditValues(prev => ({
+                                ...prev,
+                                yellow: clampedVal,
+                                red: isReverseIndicator(config.indicator)
+                                  ? Math.min(prev.red, clampedVal)
+                                  : Math.max(prev.red, clampedVal),
+                              }))
+                            }}
+                            min={0}
+                            max={100}
+                            step={1}
+                            className="w-full px-2 py-1 rounded border text-sm font-mono outline-none focus:ring-2 focus:ring-amber-500/30"
                             style={{
                               background: 'var(--bg-card-hover)',
                               borderColor: '#EAB308',
@@ -476,8 +491,23 @@ export default function ThresholdSettings() {
                           <input
                             type="number"
                             value={editValues.red}
-                            onChange={(e) => setEditValues(prev => ({ ...prev, red: Number(e.target.value) }))}
-                            className="w-full px-2 py-1 rounded border text-sm font-mono outline-none"
+                            onChange={(e) => {
+                              const val = Number(e.target.value)
+                              const maxVal = 100
+                              const minVal = 0
+                              const clampedVal = Math.max(minVal, Math.min(maxVal, val))
+                              setEditValues(prev => ({
+                                ...prev,
+                                red: clampedVal,
+                                yellow: isReverseIndicator(config.indicator)
+                                  ? Math.max(prev.yellow, clampedVal)
+                                  : Math.min(prev.yellow, clampedVal),
+                              }))
+                            }}
+                            min={0}
+                            max={100}
+                            step={1}
+                            className="w-full px-2 py-1 rounded border text-sm font-mono outline-none focus:ring-2 focus:ring-red-500/30"
                             style={{
                               background: 'var(--bg-card-hover)',
                               borderColor: '#EF4444',
@@ -500,25 +530,96 @@ export default function ThresholdSettings() {
                       </div>
 
                       <div className="col-span-6">
-                        <div
-                          className="h-2 rounded-full overflow-hidden"
-                          style={{ background: 'rgba(255,255,255,0.05)' }}
-                        >
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: isReverse ? '100%' : `${Math.min(config.redWarning, 100)}%`,
-                              background: isReverse
-                                ? `linear-gradient(to right, #EF4444 0%, #EF4444 ${100 - config.redWarning}%, #EAB308 ${100 - config.redWarning}%, #EAB308 ${100 - config.yellowWarning}%, #22C55E ${100 - config.yellowWarning}%, #22C55E 100%)`
-                                : `linear-gradient(to right, #22C55E 0%, #22C55E ${config.yellowWarning}%, #EAB308 ${config.yellowWarning}%, #EAB308 ${config.redWarning}%, #EF4444 ${config.redWarning}%, #EF4444 100%)`,
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                          <span>正常</span>
-                          <span style={{ color: '#EAB308' }}>黄灯区</span>
-                          <span style={{ color: '#EF4444' }}>红灯区</span>
-                        </div>
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <div className="relative h-8 rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                              <div
+                                className="absolute inset-0"
+                                style={{
+                                  background: isReverse
+                                    ? `linear-gradient(to right, #22C55E 0%, #22C55E ${100 - editValues.yellow}%, #EAB308 ${100 - editValues.yellow}%, #EAB308 ${100 - editValues.red}%, #EF4444 ${100 - editValues.red}%, #EF4444 100%)`
+                                    : `linear-gradient(to right, #22C55E 0%, #22C55E ${editValues.yellow}%, #EAB308 ${editValues.yellow}%, #EAB308 ${editValues.red}%, #EF4444 ${editValues.red}%, #EF4444 100%)`,
+                                }}
+                              />
+                              <div
+                                className="absolute top-0 bottom-0 w-1 cursor-ew-resize transition-all hover:scale-125"
+                                style={{
+                                  left: isReverse ? `${100 - editValues.yellow}%` : `${editValues.yellow}%`,
+                                  transform: 'translateX(-50%)',
+                                }}
+                                title="黄灯触发点"
+                              >
+                                <div
+                                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-lg cursor-pointer"
+                                  style={{ background: '#EAB308' }}
+                                />
+                              </div>
+                              <div
+                                className="absolute top-0 bottom-0 w-1 cursor-ew-resize transition-all hover:scale-125"
+                                style={{
+                                  left: isReverse ? `${100 - editValues.red}%` : `${editValues.red}%`,
+                                  transform: 'translateX(-50%)',
+                                }}
+                                title="红灯触发点"
+                              >
+                                <div
+                                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-lg cursor-pointer"
+                                  style={{ background: '#EF4444' }}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
+                              <span>拖动滑块调整阈值</span>
+                              <span className="flex gap-3">
+                                <span style={{ color: '#EAB308' }}>
+                                  黄灯: {editValues.yellow}{config.unit || THRESHOLD_INDICATOR_UNITS[config.indicator]}
+                                </span>
+                                <span style={{ color: '#EF4444' }}>
+                                  红灯: {editValues.red}{config.unit || THRESHOLD_INDICATOR_UNITS[config.indicator]}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div
+                              className="relative h-6 rounded-full overflow-hidden cursor-pointer group"
+                              style={{ background: 'rgba(255,255,255,0.05)' }}
+                              onClick={() => handleEditStart(config)}
+                            >
+                              <div
+                                className="h-full rounded-full transition-all group-hover:opacity-90"
+                                style={{
+                                  width: isReverse ? '100%' : `${Math.min(config.redWarning, 100)}%`,
+                                  background: isReverse
+                                    ? `linear-gradient(to right, #EF4444 0%, #EF4444 ${100 - config.redWarning}%, #EAB308 ${100 - config.redWarning}%, #EAB308 ${100 - config.yellowWarning}%, #22C55E ${100 - config.yellowWarning}%, #22C55E 100%)`
+                                    : `linear-gradient(to right, #22C55E 0%, #22C55E ${config.yellowWarning}%, #EAB308 ${config.yellowWarning}%, #EAB308 ${config.redWarning}%, #EF4444 ${config.redWarning}%, #EF4444 100%)`,
+                                }}
+                              />
+                              <div
+                                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md transition-transform group-hover:scale-125"
+                                style={{
+                                  left: isReverse ? `${100 - config.yellowWarning}%` : `${config.yellowWarning}%`,
+                                  background: '#EAB308',
+                                  transform: 'translate(-50%, -50%)',
+                                }}
+                              />
+                              <div
+                                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md transition-transform group-hover:scale-125"
+                                style={{
+                                  left: isReverse ? `${100 - config.redWarning}%` : `${config.redWarning}%`,
+                                  background: '#EF4444',
+                                  transform: 'translate(-50%, -50%)',
+                                }}
+                              />
+                            </div>
+                            <div className="flex justify-between mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                              <span>正常</span>
+                              <span style={{ color: '#EAB308' }}>黄灯 {isReverse ? '低于' : '超过'} {config.yellowWarning}{config.unit || THRESHOLD_INDICATOR_UNITS[config.indicator]}</span>
+                              <span style={{ color: '#EF4444' }}>红灯 {isReverse ? '低于' : '超过'} {config.redWarning}{config.unit || THRESHOLD_INDICATOR_UNITS[config.indicator]}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
