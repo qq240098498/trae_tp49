@@ -1,4 +1,4 @@
-import type { Risk, RiskHistory, ResponsePlan, TrendSnapshot, Alert } from '@/types'
+import type { Risk, RiskHistory, ResponsePlan, TrendSnapshot, Alert, RiskConductionEdge, RiskConductionPath } from '@/types'
 
 export const mockRisks: Risk[] = [
   {
@@ -363,3 +363,71 @@ export const mockAlerts: Alert[] = [
   { id: 'a5', type: 'info', title: '风险状态变更', message: 'RSK-20260611-011 状态变更为"缓解中"', timestamp: '2026-06-14T10:20:00', read: true },
   { id: 'a6', type: 'info', title: '新风险识别', message: 'RSK-20260612-012 已识别新风险：竞品发布类似功能影响排期', timestamp: '2026-06-12T14:00:00', read: true },
 ]
+
+export const mockConductionEdges: RiskConductionEdge[] = [
+  { id: 'e1', sourceRiskId: 'RSK-20260602-002', targetRiskId: 'RSK-20260601-001', strength: 4, description: '核心人员离职导致开发进度延迟', type: 'direct' },
+  { id: 'e2', sourceRiskId: 'RSK-20260603-003', targetRiskId: 'RSK-20260601-001', strength: 5, description: '新增需求直接导致交付延期', type: 'direct' },
+  { id: 'e3', sourceRiskId: 'RSK-20260612-012', targetRiskId: 'RSK-20260601-001', strength: 3, description: '竞品压力促使排期压缩', type: 'indirect' },
+  { id: 'e4', sourceRiskId: 'RSK-20260612-012', targetRiskId: 'RSK-20260605-005', strength: 3, description: '压缩排期导致测试时间不足', type: 'indirect' },
+  { id: 'e5', sourceRiskId: 'RSK-20260601-001', targetRiskId: 'RSK-20260609-009', strength: 2, description: '赶进度导致安全测试不充分', type: 'indirect' },
+  { id: 'e6', sourceRiskId: 'RSK-20260604-004', targetRiskId: 'RSK-20260608-008', strength: 3, description: '云服务故障增加数据迁移风险', type: 'direct' },
+  { id: 'e7', sourceRiskId: 'RSK-20260604-004', targetRiskId: 'RSK-20260611-011', strength: 2, description: '基础设施故障涉及证书服务', type: 'indirect' },
+  { id: 'e8', sourceRiskId: 'RSK-20260611-011', targetRiskId: 'RSK-20260607-003', strength: 2, description: '证书过期影响短信服务调用', type: 'indirect' },
+  { id: 'e9', sourceRiskId: 'RSK-20260606-006', targetRiskId: 'RSK-20260601-001', strength: 2, description: 'UI反复变更影响前端开发效率', type: 'direct' },
+  { id: 'e10', sourceRiskId: 'RSK-20260605-005', targetRiskId: 'RSK-20260609-009', strength: 3, description: '测试资源不足导致安全漏洞逃逸', type: 'cascading' },
+  { id: 'e11', sourceRiskId: 'RSK-20260610-010', targetRiskId: 'RSK-20260603-003', strength: 2, description: '文档混乱导致需求理解偏差', type: 'direct' },
+  { id: 'e12', sourceRiskId: 'RSK-20260608-008', targetRiskId: 'RSK-20260601-001', strength: 2, description: '数据库问题影响整体交付进度', type: 'indirect' },
+  { id: 'e13', sourceRiskId: 'RSK-20260601-001', targetRiskId: 'RSK-20260607-003', strength: 1, description: '延期导致第三方服务对接延后', type: 'indirect' },
+]
+
+export const mockConductionPaths: RiskConductionPath[] = [
+  {
+    id: 'chain-1',
+    name: '人员-进度-质量传导链',
+    riskIds: ['RSK-20260602-002', 'RSK-20260601-001', 'RSK-20260609-009'],
+    totalImpact: 14,
+    description: '核心人员离职导致开发进度延迟，赶工又引发安全质量风险',
+    category: 'resource',
+  },
+  {
+    id: 'chain-2',
+    name: '需求变更连锁反应',
+    riskIds: ['RSK-20260603-003', 'RSK-20260601-001', 'RSK-20260609-009'],
+    totalImpact: 15,
+    description: '客户追加需求导致排期紧张，质量测试时间被压缩',
+    category: 'schedule',
+  },
+  {
+    id: 'chain-3',
+    name: '基础设施级联故障',
+    riskIds: ['RSK-20260604-004', 'RSK-20260608-008', 'RSK-20260601-001'],
+    totalImpact: 13,
+    description: '云服务商故障引发数据库迁移风险，最终影响项目交付',
+    category: 'dependency',
+  },
+  {
+    id: 'chain-4',
+    name: '竞品压力传导链',
+    riskIds: ['RSK-20260612-012', 'RSK-20260601-001', 'RSK-20260609-009'],
+    totalImpact: 16,
+    description: '竞品发布倒逼排期压缩，质量和安全风险随之升高',
+    category: 'schedule',
+  },
+  {
+    id: 'chain-5',
+    name: '测试资源不足传导链',
+    riskIds: ['RSK-20260612-012', 'RSK-20260605-005', 'RSK-20260609-009'],
+    totalImpact: 13,
+    description: '排期压缩导致测试时间不足，安全漏洞未能及时发现',
+    category: 'quality',
+  },
+  {
+    id: 'chain-6',
+    name: '文档管理传导链',
+    riskIds: ['RSK-20260610-010', 'RSK-20260603-003', 'RSK-20260601-001'],
+    totalImpact: 10,
+    description: '文档版本混乱引发需求理解偏差，最终影响交付进度',
+    category: 'resource',
+  },
+]
+

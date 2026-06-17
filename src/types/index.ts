@@ -120,3 +120,62 @@ export const DIMENSION_COLORS: Record<RiskDimension, string> = {
   requirement: '#F59E0B',
   dependency: '#06B6D4',
 }
+
+export interface RiskConductionEdge {
+  id: string
+  sourceRiskId: string
+  targetRiskId: string
+  strength: number
+  description: string
+  type: 'direct' | 'indirect' | 'cascading'
+}
+
+export interface RiskConductionPath {
+  id: string
+  name: string
+  riskIds: string[]
+  totalImpact: number
+  description: string
+  category: string
+}
+
+export interface GraphNode {
+  id: string
+  x: number
+  y: number
+  risk: Risk
+  isHub: boolean
+  hubScore: number
+  inDegree: number
+  outDegree: number
+}
+
+export interface GraphEdge {
+  id: string
+  source: string
+  target: string
+  strength: number
+  type: 'direct' | 'indirect' | 'cascading'
+}
+
+export interface ConductionAnalysisResult {
+  hubNodes: Risk[]
+  highRiskChains: RiskConductionPath[]
+  isolatedNodes: Risk[]
+  totalChains: number
+  maxChainLength: number
+  chainRiskScore: number
+}
+
+export const EDGE_TYPE_LABELS: Record<string, string> = {
+  direct: '直接传导',
+  indirect: '间接影响',
+  cascading: '级联效应',
+}
+
+export const CHAIN_CATEGORY_LABELS: Record<string, string> = {
+  schedule: '进度传导链',
+  quality: '质量传导链',
+  resource: '资源传导链',
+  dependency: '依赖传导链',
+}

@@ -4,6 +4,7 @@ import Header from '@/components/layout/Header'
 import Dashboard from '@/pages/Dashboard'
 import Register from '@/pages/Register'
 import Assess from '@/pages/Assess'
+import Conduction from '@/pages/Conduction'
 import Trends from '@/pages/Trends'
 import Response from '@/pages/Response'
 import { useRiskStore } from '@/stores/riskStore'
@@ -28,6 +29,7 @@ function AppLayout() {
             <Route path="/register" element={<Register />} />
             <Route path="/assess" element={<Assess />} />
             <Route path="/assess/:id" element={<Assess />} />
+            <Route path="/conduction" element={<Conduction />} />
             <Route path="/trends" element={<Trends />} />
             <Route path="/response" element={<Response />} />
           </Routes>

@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Risk, RiskHistory, ResponsePlan, TrendSnapshot, Alert } from '@/types'
-import { mockRisks, mockRiskHistories, mockResponsePlans, mockTrendSnapshots, mockAlerts } from '@/data/mockData'
+import type { Risk, RiskHistory, ResponsePlan, TrendSnapshot, Alert, RiskConductionEdge, RiskConductionPath, ConductionAnalysisResult } from '@/types'
+import { mockRisks, mockRiskHistories, mockResponsePlans, mockTrendSnapshots, mockAlerts, mockConductionEdges, mockConductionPaths } from '@/data/mockData'
 import { calculateRiskScore, getRiskLevel, generateRiskId, generateId } from '@/utils/riskCalc'
+import { analyzeConduction as analyzeConductionUtil } from '@/utils/conductionAnalysis'
 
 interface RiskStore {
   risks: Risk[]
@@ -10,6 +11,8 @@ interface RiskStore {
   responsePlans: ResponsePlan[]
   trendSnapshots: TrendSnapshot[]
   alerts: Alert[]
+  conductionEdges: RiskConductionEdge[]
+  conductionPaths: RiskConductionPath[]
   initialized: boolean
 
   initialize: () => void
@@ -20,6 +23,12 @@ interface RiskStore {
   updateResponsePlan: (id: string, updates: Partial<ResponsePlan>) => void
   markAlertRead: (id: string) => void
   markAllAlertsRead: () => void
+  addConductionEdge: (edge: Omit<RiskConductionEdge, 'id'>) => void
+  removeConductionEdge: (id: string) => void
+  addConductionPath: (path: Omit<RiskConductionPath, 'id'>) => void
+  removeConductionPath: (id: string) => void
+  getConductionAnalysis: () => ConductionAnalysisResult
+  getRelatedRisks: (riskId: string) => Risk[]
 }
 
 export const useRiskStore = create<RiskStore>()(
@@ -30,6 +39,8 @@ export const useRiskStore = create<RiskStore>()(
       responsePlans: [],
       trendSnapshots: [],
       alerts: [],
+      conductionEdges: [],
+      conductionPaths: [],
       initialized: false,
 
       initialize: () => {
@@ -40,6 +51,8 @@ export const useRiskStore = create<RiskStore>()(
             responsePlans: mockResponsePlans,
             trendSnapshots: mockTrendSnapshots,
             alerts: mockAlerts,
+            conductionEdges: mockConductionEdges,
+            conductionPaths: mockConductionPaths,
             initialized: true,
           })
         }
@@ -122,6 +135,43 @@ export const useRiskStore = create<RiskStore>()(
         set((state) => ({
           alerts: state.alerts.map(a => ({ ...a, read: true })),
         }))
+      },
+
+      addConductionEdge: (edgeData) => {
+        const newEdge: RiskConductionEdge = { ...edgeData, id: generateId() }
+        set((state) => ({ conductionEdges: [...state.conductionEdges, newEdge] }))
+      },
+
+      removeConductionEdge: (id) => {
+        set((state) => ({
+          conductionEdges: state.conductionEdges.filter(e => e.id !== id),
+        }))
+      },
+
+      addConductionPath: (pathData) => {
+        const newPath: RiskConductionPath = { ...pathData, id: generateId() }
+        set((state) => ({ conductionPaths: [...state.conductionPaths, newPath] }))
+      },
+
+      removeConductionPath: (id) => {
+        set((state) => ({
+          conductionPaths: state.conductionPaths.filter(p => p.id !== id),
+        }))
+      },
+
+      getConductionAnalysis: () => {
+        const { risks, conductionEdges, conductionPaths } = get()
+        return analyzeConductionUtil(risks, conductionEdges, conductionPaths)
+      },
+
+      getRelatedRisks: (riskId) => {
+        const { risks, conductionEdges } = get()
+        const relatedIds = new Set<string>()
+        conductionEdges.forEach(e => {
+          if (e.sourceRiskId === riskId) relatedIds.add(e.targetRiskId)
+          if (e.targetRiskId === riskId) relatedIds.add(e.sourceRiskId)
+        })
+        return risks.filter(r => relatedIds.has(r.id))
       },
     }),
     { name: 'risk-control-store' }

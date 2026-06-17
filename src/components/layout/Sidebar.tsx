@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { Shield, LayoutDashboard, ClipboardList, ScanSearch, TrendingUp, ShieldCheck } from 'lucide-react'
+import { Shield, LayoutDashboard, ClipboardList, ScanSearch, TrendingUp, ShieldCheck, Network } from 'lucide-react'
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: '风险总览' },
   { to: '/register', icon: ClipboardList, label: '风险登记册' },
   { to: '/assess', icon: ScanSearch, label: '识别评估' },
+  { to: '/conduction', icon: Network, label: '关联分析' },
   { to: '/trends', icon: TrendingUp, label: '趋势分析' },
   { to: '/response', icon: ShieldCheck, label: '响应预案' },
 ]
