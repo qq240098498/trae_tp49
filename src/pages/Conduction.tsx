@@ -9,6 +9,8 @@ import {
   CHAIN_CATEGORY_LABELS,
   EDGE_TYPE_LABELS,
   type RiskConductionPath,
+  type RiskDimension,
+  type RiskLevel,
 } from '@/types'
 import {
   GitBranch,
@@ -22,16 +24,59 @@ import {
   ShieldAlert,
   ArrowRight,
   Info,
+  Search,
+  Filter,
+  X,
+  RefreshCw,
 } from 'lucide-react'
+import { identifyHubNodes, analyzeConduction } from '@/utils/conductionAnalysis'
 
 export default function Conduction() {
-  const { risks, conductionEdges, conductionPaths, getConductionAnalysis, initialize, getRelatedRisks } = useRiskStore()
+  const { risks, conductionEdges, conductionPaths, initialize, getRelatedRisks } = useRiskStore()
   const [selectedRiskId, setSelectedRiskId] = useState<string>('')
   const [selectedChainId, setSelectedChainId] = useState<string>('')
+  const [searchKeyword, setSearchKeyword] = useState<string>('')
+  const [selectedDimensions, setSelectedDimensions] = useState<RiskDimension[]>([])
+  const [selectedLevels, setSelectedLevels] = useState<RiskLevel[]>([])
+  const [selectedChainCategories, setSelectedChainCategories] = useState<string[]>([])
 
   useMemo(() => { initialize() }, [initialize])
 
-  const analysis = useMemo(() => getConductionAnalysis(), [getConductionAnalysis])
+  const filteredRisks = useMemo(() => {
+    return risks.filter(risk => {
+      if (searchKeyword) {
+        const keyword = searchKeyword.toLowerCase()
+        const matchTitle = risk.title.toLowerCase().includes(keyword)
+        const matchDesc = risk.description.toLowerCase().includes(keyword)
+        const matchId = risk.id.toLowerCase().includes(keyword)
+        if (!matchTitle && !matchDesc && !matchId) return false
+      }
+      if (selectedDimensions.length > 0 && !selectedDimensions.includes(risk.dimension)) return false
+      if (selectedLevels.length > 0 && !selectedLevels.includes(risk.level)) return false
+      return true
+    })
+  }, [risks, searchKeyword, selectedDimensions, selectedLevels])
+
+  const filteredEdges = useMemo(() => {
+    const filteredIds = new Set(filteredRisks.map(r => r.id))
+    return conductionEdges.filter(e => filteredIds.has(e.sourceRiskId) && filteredIds.has(e.targetRiskId))
+  }, [conductionEdges, filteredRisks])
+
+  const filteredPaths = useMemo(() => {
+    if (selectedChainCategories.length === 0 && filteredRisks.length === risks.length) return conductionPaths
+    return conductionPaths.filter(path => {
+      if (selectedChainCategories.length > 0 && !selectedChainCategories.includes(path.category)) return false
+      const hasRiskInFilter = path.riskIds.some(id => filteredRisks.some(r => r.id === id))
+      if (filteredRisks.length < risks.length && !hasRiskInFilter) return false
+      return true
+    })
+  }, [conductionPaths, selectedChainCategories, filteredRisks, risks.length])
+
+  const analysis = useMemo(() => {
+    return analyzeConduction(filteredRisks, filteredEdges, filteredPaths)
+  }, [filteredRisks, filteredEdges, filteredPaths])
+
+  const hasActiveFilters = searchKeyword || selectedDimensions.length > 0 || selectedLevels.length > 0 || selectedChainCategories.length > 0
 
   const selectedRisk = useMemo(() => {
     if (!selectedRiskId) return null
@@ -80,6 +125,50 @@ export default function Conduction() {
     return '#22C55E'
   }
 
+  const toggleDimension = (dim: RiskDimension) => {
+    setSelectedDimensions(prev =>
+      prev.includes(dim) ? prev.filter(d => d !== dim) : [...prev, dim]
+    )
+  }
+
+  const toggleLevel = (level: RiskLevel) => {
+    setSelectedLevels(prev =>
+      prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]
+    )
+  }
+
+  const toggleChainCategory = (cat: string) => {
+    setSelectedChainCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    )
+  }
+
+  const clearAllFilters = () => {
+    setSearchKeyword('')
+    setSelectedDimensions([])
+    setSelectedLevels([])
+    setSelectedChainCategories([])
+  }
+
+  const dimensionOptions: { value: RiskDimension; label: string; color: string }[] = [
+    { value: 'schedule', label: '进度偏差', color: DIMENSION_COLORS.schedule },
+    { value: 'resource', label: '资源冲突', color: DIMENSION_COLORS.resource },
+    { value: 'requirement', label: '需求变更', color: DIMENSION_COLORS.requirement },
+    { value: 'dependency', label: '外部依赖', color: DIMENSION_COLORS.dependency },
+  ]
+
+  const levelOptions: { value: RiskLevel; label: string; color: string }[] = [
+    { value: 'critical', label: '极高', color: LEVEL_COLORS.critical },
+    { value: 'high', label: '高', color: LEVEL_COLORS.high },
+    { value: 'medium', label: '中', color: LEVEL_COLORS.medium },
+    { value: 'low', label: '低', color: LEVEL_COLORS.low },
+  ]
+
+  const chainCategoryOptions = Object.entries(CHAIN_CATEGORY_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  }))
+
   return (
     <div className="w-full p-6 space-y-6" style={{ background: 'var(--bg-primary)' }}>
       <div className="flex items-center justify-between">
@@ -93,6 +182,135 @@ export default function Conduction() {
           <Info size={14} />
           <span>识别风险传导链路，定位关键枢纽节点</span>
         </div>
+      </div>
+
+      <div
+        className="rounded-xl p-4 border"
+        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Filter size={14} style={{ color: 'var(--accent-amber)' }} />
+          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>筛选条件</span>
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+            >
+              <RefreshCw size={12} />
+              重置
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-[320px]">
+            <div className="relative flex-1">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                placeholder="搜索风险标题、描述或编号..."
+                className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm outline-none transition-colors"
+                style={{
+                  background: 'var(--bg-card-hover)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+              {searchKeyword && (
+                <button
+                  onClick={() => setSearchKeyword('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>维度:</span>
+            <div className="flex items-center gap-1">
+              {dimensionOptions.map(opt => {
+                const isActive = selectedDimensions.includes(opt.value)
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => toggleDimension(opt.value)}
+                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 border"
+                    style={{
+                      background: isActive ? `${opt.color}20` : 'transparent',
+                      borderColor: isActive ? opt.color : 'var(--border-color)',
+                      color: isActive ? opt.color : 'var(--text-secondary)',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>等级:</span>
+            <div className="flex items-center gap-1">
+              {levelOptions.map(opt => {
+                const isActive = selectedLevels.includes(opt.value)
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => toggleLevel(opt.value)}
+                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 border"
+                    style={{
+                      background: isActive ? `${opt.color}20` : 'transparent',
+                      borderColor: isActive ? opt.color : 'var(--border-color)',
+                      color: isActive ? opt.color : 'var(--text-secondary)',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>传导类型:</span>
+            <div className="flex items-center gap-1">
+              {chainCategoryOptions.map(opt => {
+                const isActive = selectedChainCategories.includes(opt.value)
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => toggleChainCategory(opt.value)}
+                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 border"
+                    style={{
+                      background: isActive ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
+                      borderColor: isActive ? '#8B5CF6' : 'var(--border-color)',
+                      color: isActive ? '#8B5CF6' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              共找到 <span className="font-mono font-semibold" style={{ color: 'var(--accent-amber)' }}>{filteredRisks.length}</span> 个风险，
+              <span className="font-mono font-semibold" style={{ color: '#8B5CF6' }}>{filteredPaths.length}</span> 条传导链
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -145,8 +363,8 @@ export default function Conduction() {
             </div>
           </div>
           <RiskConductionGraph
-            risks={risks}
-            edges={conductionEdges}
+            risks={filteredRisks}
+            edges={filteredEdges}
             selectedRiskId={selectedRiskId || undefined}
             onRiskClick={handleRiskClick}
             height={440}
