@@ -14,6 +14,12 @@ import type {
   ProjectType,
   ProjectStage,
   ThresholdIndicator,
+  HistoricalProject,
+  HistoricalRiskRecord,
+  ProjectReviewConclusion,
+  LessonInsight,
+  HistoricalLessonsFilter,
+  RiskDimension,
 } from '@/types'
 import {
   mockRisks,
@@ -24,6 +30,10 @@ import {
   mockConductionEdges,
   mockConductionPaths,
   mockThresholdConfigs,
+  mockHistoricalProjects,
+  mockHistoricalRiskRecords,
+  mockProjectReviewConclusions,
+  mockLessonInsights,
 } from '@/data/mockData'
 import { calculateRiskScore, getRiskLevel, generateRiskId, generateId } from '@/utils/riskCalc'
 import { analyzeConduction as analyzeConductionUtil } from '@/utils/conductionAnalysis'
@@ -38,6 +48,11 @@ interface RiskStore {
   conductionEdges: RiskConductionEdge[]
   conductionPaths: RiskConductionPath[]
   thresholdConfigs: ThresholdConfig[]
+  historicalProjects: HistoricalProject[]
+  historicalRiskRecords: HistoricalRiskRecord[]
+  projectReviewConclusions: ProjectReviewConclusion[]
+  lessonInsights: LessonInsight[]
+  appliedLessonIds: string[]
   initialized: boolean
 
   initialize: () => void
@@ -58,6 +73,13 @@ interface RiskStore {
   updateThresholdConfig: (id: string, updates: Partial<ThresholdConfig>) => void
   getRecommendations: (projectType: ProjectType, projectStage: ProjectStage) => ThresholdRecommendation[]
   applyRecommendation: (indicator: ThresholdIndicator, projectType: ProjectType, projectStage: ProjectStage) => void
+  getHistoricalProjects: () => HistoricalProject[]
+  getHistoricalRiskRecords: (projectId?: string) => HistoricalRiskRecord[]
+  getProjectReviewConclusions: (projectId?: string) => ProjectReviewConclusion[]
+  getLessonInsights: (filter?: HistoricalLessonsFilter) => LessonInsight[]
+  applyLesson: (lessonId: string) => void
+  unapplyLesson: (lessonId: string) => void
+  getHistoricalProjectById: (id: string) => HistoricalProject | undefined
 }
 
 export const useRiskStore = create<RiskStore>()(
@@ -71,6 +93,11 @@ export const useRiskStore = create<RiskStore>()(
       conductionEdges: [],
       conductionPaths: [],
       thresholdConfigs: [],
+      historicalProjects: [],
+      historicalRiskRecords: [],
+      projectReviewConclusions: [],
+      lessonInsights: [],
+      appliedLessonIds: [],
       initialized: false,
 
       initialize: () => {
@@ -84,6 +111,10 @@ export const useRiskStore = create<RiskStore>()(
             conductionEdges: mockConductionEdges,
             conductionPaths: mockConductionPaths,
             thresholdConfigs: mockThresholdConfigs,
+            historicalProjects: mockHistoricalProjects,
+            historicalRiskRecords: mockHistoricalRiskRecords,
+            projectReviewConclusions: mockProjectReviewConclusions,
+            lessonInsights: mockLessonInsights,
             initialized: true,
           })
         }
@@ -261,6 +292,66 @@ export const useRiskStore = create<RiskStore>()(
           }
           set((state) => ({ thresholdConfigs: [...state.thresholdConfigs, newConfig] }))
         }
+      },
+
+      getHistoricalProjects: () => {
+        return get().historicalProjects
+      },
+
+      getHistoricalRiskRecords: (projectId) => {
+        const { historicalRiskRecords } = get()
+        if (!projectId) return historicalRiskRecords
+        return historicalRiskRecords.filter(r => r.historicalProjectId === projectId)
+      },
+
+      getProjectReviewConclusions: (projectId) => {
+        const { projectReviewConclusions } = get()
+        if (!projectId) return projectReviewConclusions
+        return projectReviewConclusions.filter(c => c.historicalProjectId === projectId)
+      },
+
+      getLessonInsights: (filter) => {
+        let insights = [...get().lessonInsights]
+        if (!filter) return insights.sort((a, b) => b.relevanceScore - a.relevanceScore)
+
+        if (filter.minRelevance !== undefined) {
+          insights = insights.filter(i => i.relevanceScore >= filter.minRelevance!)
+        }
+
+        if (filter.dimensions && filter.dimensions.length > 0) {
+          insights = insights.filter(i =>
+            i.relatedDimensions.some(d => filter.dimensions!.includes(d as RiskDimension))
+          )
+        }
+
+        if (filter.searchKeyword) {
+          const kw = filter.searchKeyword.toLowerCase()
+          insights = insights.filter(i =>
+            i.title.toLowerCase().includes(kw) ||
+            i.summary.toLowerCase().includes(kw) ||
+            i.keywords.some(k => k.toLowerCase().includes(kw))
+          )
+        }
+
+        return insights.sort((a, b) => b.relevanceScore - a.relevanceScore)
+      },
+
+      applyLesson: (lessonId) => {
+        set((state) => ({
+          appliedLessonIds: state.appliedLessonIds.includes(lessonId)
+            ? state.appliedLessonIds
+            : [...state.appliedLessonIds, lessonId],
+        }))
+      },
+
+      unapplyLesson: (lessonId) => {
+        set((state) => ({
+          appliedLessonIds: state.appliedLessonIds.filter(id => id !== lessonId),
+        }))
+      },
+
+      getHistoricalProjectById: (id) => {
+        return get().historicalProjects.find(p => p.id === id)
       },
     }),
     { name: 'risk-control-store' }

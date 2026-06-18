@@ -244,3 +244,124 @@ export const THRESHOLD_INDICATOR_UNITS: Record<ThresholdIndicator, string> = {
   testPassRate: '%',
   dependencyRisk: '分',
 }
+
+export type SimilarityDimension = 'schedule' | 'resource' | 'requirement' | 'dependency' | 'scale' | 'industry'
+export type LessonPriority = 'critical' | 'high' | 'medium' | 'low'
+
+export interface HistoricalProject {
+  id: string
+  name: string
+  code: string
+  description: string
+  startDate: string
+  endDate: string
+  type: ProjectType
+  industry: string
+  scale: string
+  budget: string
+  teamSize: number
+  actualDuration: string
+  scheduleDeviation: number
+  onTimeDelivered: boolean
+  overallRating: 'excellent' | 'good' | 'average' | 'poor'
+  tags: string[]
+  keyRisksEncountered: RiskDimension[]
+}
+
+export interface HistoricalRiskRecord {
+  id: string
+  historicalProjectId: string
+  title: string
+  description: string
+  dimension: RiskDimension
+  probability: number
+  impact: number
+  riskScore: number
+  level: RiskLevel
+  actualOccurrence: boolean
+  actualImpact: string
+  mitigationMeasures: string
+  mitigationEffectiveness: number
+  lessonsLearned: string
+}
+
+export interface ProjectReviewConclusion {
+  id: string
+  historicalProjectId: string
+  category: string
+  title: string
+  conclusion: string
+  recommendation: string
+  actionableSteps: string[]
+  evidenceLinks: string[]
+  createdAt: string
+  author: string
+}
+
+export interface LessonInsight {
+  id: string
+  title: string
+  summary: string
+  sourceProjectIds: string[]
+  occurrenceCount: number
+  relatedDimensions: RiskDimension[]
+  priority: LessonPriority
+  suggestedActions: string[]
+  keywords: string[]
+  relevanceScore: number
+  matchDetails: {
+    dimension: SimilarityDimension
+    similarity: number
+    explanation: string
+  }[]
+}
+
+export interface HistoricalLessonsFilter {
+  projectType?: ProjectType
+  projectStage?: ProjectStage
+  dimensions?: RiskDimension[]
+  minRelevance?: number
+  searchKeyword?: string
+}
+
+export const HISTORICAL_PROJECT_TAGS = [
+  '支付系统', '电商平台', 'SaaS应用', '数据中台', '移动App',
+  '政企项目', '金融科技', '教育系统', '医疗信息化', '物流平台',
+]
+
+export const LESSON_PRIORITY_LABELS: Record<LessonPriority, string> = {
+  critical: '极高优先',
+  high: '高优先',
+  medium: '中优先',
+  low: '低优先',
+}
+
+export const LESSON_PRIORITY_COLORS: Record<LessonPriority, string> = {
+  critical: '#EF4444',
+  high: '#F97316',
+  medium: '#EAB308',
+  low: '#22C55E',
+}
+
+export const PROJECT_RATING_LABELS: Record<HistoricalProject['overallRating'], string> = {
+  excellent: '优秀',
+  good: '良好',
+  average: '一般',
+  poor: '较差',
+}
+
+export const PROJECT_RATING_COLORS: Record<HistoricalProject['overallRating'], string> = {
+  excellent: '#22C55E',
+  good: '#3B82F6',
+  average: '#EAB308',
+  poor: '#EF4444',
+}
+
+export const SIMILARITY_DIMENSION_LABELS: Record<SimilarityDimension, string> = {
+  schedule: '进度特征',
+  resource: '资源配置',
+  requirement: '需求模式',
+  dependency: '外部依赖',
+  scale: '项目规模',
+  industry: '行业领域',
+}

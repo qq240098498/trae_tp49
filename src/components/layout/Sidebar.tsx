@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Shield, LayoutDashboard, ClipboardList, ScanSearch, TrendingUp, ShieldCheck, Network, Gauge } from 'lucide-react'
+import { Shield, LayoutDashboard, ClipboardList, ScanSearch, TrendingUp, ShieldCheck, Network, Gauge, BookOpen } from 'lucide-react'
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: '风险总览' },
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/trends', icon: TrendingUp, label: '趋势分析' },
   { to: '/response', icon: ShieldCheck, label: '响应预案' },
   { to: '/thresholds', icon: Gauge, label: '阈值设定' },
+  { to: '/lessons', icon: BookOpen, label: '历史复盘借鉴' },
 ]
 
 export default function Sidebar() {
