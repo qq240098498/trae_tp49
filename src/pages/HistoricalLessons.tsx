@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRiskStore } from '@/stores/riskStore'
 import {
   DIMENSION_LABELS,
@@ -124,6 +124,20 @@ export default function HistoricalLessons() {
     }
     return result
   }, [historicalProjects, selectedProjectType, selectedProjectStage, searchKeyword])
+
+  useEffect(() => {
+    if (activeTab !== 'projects') return
+    setSelectedProject(prevSelected => {
+      if (prevSelected) {
+        const stillExists = filteredProjects.some(p => p.id === prevSelected.id)
+        if (!stillExists) {
+          return filteredProjects.length > 0 ? filteredProjects[0] : null
+        }
+        return prevSelected
+      }
+      return filteredProjects.length > 0 ? filteredProjects[0] : prevSelected
+    })
+  }, [filteredProjects, activeTab])
 
   const projectRiskMap = useMemo(() => {
     const map: Record<string, any[]> = {}
